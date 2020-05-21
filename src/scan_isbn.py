@@ -1,15 +1,29 @@
+import glob
+import os
 import re
 import sys
 import tempfile
-
-import pyocr
-import PyPDF2
+from pathlib import Path
 
 import pdf2image
+import pyocr
+import PyPDF2
 
 
 def scan_isbn(input_file: str, n_use_pages: int = 7) -> str:
     """入力されたパスのPDFを読み取りISBN番号を返す
+
+    Parameters
+    ----------
+    input_file: str
+        スキャン対象のpdfファイルへのPath
+    n_use_pages: int
+        最後から何ページをスキャン対象とするか
+    
+    Returns
+    -------
+    ISBN_code: str
+        スキャン結果得られたISBNコード(978から始まる13桁)
     """
 
     with open(input_file, "rb") as f:
@@ -29,9 +43,10 @@ def scan_isbn(input_file: str, n_use_pages: int = 7) -> str:
                 return re.findall(r'978[0-9]{10}', execlude_space).pop()
 
 
-def fetch_book_info(isbn_code: int) -> dict:
-    pass
-
-
 if __name__ == "__main__":
-    scan_isbn("/home/mochi/Pictures/Pythonからはじめる数学入門.pdf")
+
+    project_dir = Path(__file__).resolve().parents[1]
+    print(project_dir)
+    for book in glob.glob(os.path.join(project_dir, "test_books/*.pdf")):
+        print(book)
+        print(scan_isbn(book))

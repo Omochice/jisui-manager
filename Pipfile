@@ -6,11 +6,15 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-sqlite3 = "*"
-sqlite = "*"
 pyocr = "*"
 pypdf2 = "*"
 pdf2image = "*"
+jpndlpy = "*"
+requests = "*"
+xmltodict = "*"
 
 [requires]
 python_version = "3.8"
+
+[pipenv]
+allow_prereleases = true
