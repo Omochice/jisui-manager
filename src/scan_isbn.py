@@ -4,13 +4,14 @@ import re
 import sys
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import pdf2image
 import pyocr
 import PyPDF2
 
 
-def scan_isbn(input_file: str, n_use_pages: int = 7) -> str:
+def scan_isbn(input_file: str, n_use_pages: int = 7) -> Optional[str]:
     """入力されたパスのPDFを読み取りISBN番号を返す
 
     Parameters
@@ -23,7 +24,7 @@ def scan_isbn(input_file: str, n_use_pages: int = 7) -> str:
     Returns
     -------
     ISBN_code: str
-        スキャン結果得られたISBNコード(978から始まる13桁)
+        スキャンの結果得られたISBNコード(978から始まる13桁、または旧コードの10桁)
     """
 
     with open(input_file, "rb") as f:
@@ -35,16 +36,18 @@ def scan_isbn(input_file: str, n_use_pages: int = 7) -> str:
                                                    output_folder=tmp_dir,
                                                    fmt="jpeg")
 
-        for page in end_of_pages:
-            ocr_rst = pyocr.tesseract.image_to_string(
-                page, builder=pyocr.builders.TextBuilder(tesseract_layout=3))
+        isbn_code = None
+
+        for page in end_of_pages[::-1]:
+            ocr_rst = pyocr.tesseract.image_to_string(page, lang="eng")
             execlude_space = ocr_rst.replace(" ", "").replace("-", "")
-            if re.search(r'ISBN978[0-9]{10}', execlude_space):
-                return re.findall(r'978[0-9]{10}', execlude_space).pop()
+            if isbn_code := re.search(r'ISBN([0-9]{13})', execlude_space):
+                return isbn_code.group(1)
+            elif isbn_code := re.search(r'ISBN([0-9]{10})', execlude_space):
+                return isbn_code.group(1)
 
 
 if __name__ == "__main__":
-
     project_dir = Path(__file__).resolve().parents[1]
     print(project_dir)
     for book in glob.glob(os.path.join(project_dir, "test_books/*.pdf")):
