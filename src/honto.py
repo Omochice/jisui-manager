@@ -1,4 +1,4 @@
-import json
+from typing import Optional
 
 import requests
 import urllib3
@@ -64,7 +64,7 @@ class HontoSearchCliant:
         category = self._get_topicpath(soup)[2].split("の通販")[0]
         return category
 
-    def _get_sub_category(self, soup: BeautifulSoup, category: str) -> str:
+    def _get_sub_category(self, soup: BeautifulSoup, category: str) -> Optional[str]:
         """書籍の小分類を返す
 
         文庫 -> 著者名
@@ -78,8 +78,8 @@ class HontoSearchCliant:
             author = [t.text for t in soup.select("p#stAuthor > span > a")][0]
             sub_category = author.split(":")[-1]    # 著:などの除去
         elif category in {"漫画・コミック", "ライトノベル"}:
-            foo = soup.select("p.stFormat")
-            if soup.select("p.stFormat") == "電子書籍":
+            media = soup.select("p.stFormat")[0].contents[0]
+            if media == "電子書籍":
                 sub_category = self._get_topicpath(soup)[-2]
             else:
                 sub_category = None
