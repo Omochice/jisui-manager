@@ -32,7 +32,7 @@ class OpenBDSearchCliant:
         self.response = requests.get(URL, params=params, headers=self.user_agent)
         r = json.loads(self.response.text)
 
-        if not r:
+        if not any(r):    # [None]だったら
             return None
 
         serialized = list(self._serialize(r))
