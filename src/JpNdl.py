@@ -1,12 +1,15 @@
-import xmltodict
-import requests
 from typing import Optional
+
+import requests
+import xmltodict
 
 
 class JpNdlSearchCliant:
     """国会図書館APIを叩くためのrequestラッパー"""
     def __init__(self, **kwargs):
         self._kwargs = kwargs
+        self._response = None
+
         self._allow_dh1024()
 
     def _allow_dh1024(self) -> None:
@@ -19,80 +22,54 @@ class JpNdlSearchCliant:
             # no pyopenssl support used / needed / available
             pass
 
-    def serch_by_isbn(self, isbn_code):
-        """isbnコードで国会図書館APIを叩く
-        
-        Parameters
-        ----------
-        isbn_code: str
-            13桁、または10桁のコード
-        
-        Returns
-        -------
-        book_information: JpNdlResponse
-            xmlをパース
+    def fetch(self, isbn: str) -> Optional[dict]:
+        """[summary]
+
+        Args:
+            isbn (str): isbn 13 or 10
+
+        Returns:
+            Optional[dict]: 書籍情報が得られればdict, そうでなければNone
         """
-        # isbnのみでの検索しか考慮してない
-        base_url = f"http://iss.ndl.go.jp/api/sru?operation=searchRetrieve&query=isbn={isbn_code}"
-        # params = {
-        #     "operation": "searchRetrieve",
-        #     "query": f"isbn={isbn_code}"
-        # }    # query=isbn=<>の書き方がわからない
-        r = requests.get(base_url)
-        return JpNdlResponse(r)
+        base_url = f"http://iss.ndl.go.jp/api/sru?operation=searchRetrieve&query=isbn={isbn}"    # =を2つ埋め込むのどうやるん
+        self._response = requests.get(base_url)
+        return self._serialize()
 
+    def _serialize(self) -> Optional[dict]:
+        """APIから得た情報を読みやすくする
 
-class JpNdlResponse:
-    """国会図書館APIのレスポンス
-    """
-    def __init__(self, response: requests.Response, isbn_code: str = None):
-        self._title = None
-        self._author = None
-        self._publisher = None
-        self._description = None
-        self._publication_date = None
-        self._response = response
-        self.isbn = isbn_code
+        Returns:
+            Optional[dict]: xmlを変換して読みやすくしたdict, APIのレコードがなければNone
+        """
+        book_info = self._xml2dict()
 
-        self.serialize()
+        if book_info is None:
+            return None
+        else:
+            return {
+                "title": book_info.get("dc:title", None),
+                "author": book_info.get("dc:aushor", None),
+                "publisher": book_info.get("dc:publisher", None)
+            }
 
-    def serialize(self) -> None:
-        """得られたrequestの結果をシリアライズする"""
-        book_info = self.xml2dict()
+    def _xml2dict(self) -> Optional[dict]:
+        """xmlをdict形式へ変換する
 
-        def _serialize_helper(query: str) -> Optional[str]:
-            if query in book_info:
-                return book_info[query]
-            else:
-                return None
+        Returns:
+            Optional[dict]: 変換結果のdict, レコード数が0ならNoneを返す
+        """
+        records = xmltodict.parse(self._response.text)
 
-        self._title = _serialize_helper("dc:title")
-        self._author = _serialize_helper("dc:author")
-        self._publisher = _serialize_helper("dc:publisher")
-        self._description = _serialize_helper("dc:descroption")
-
-    def xml2dict(self) -> dict:
-        """xmlをdict形式へ変換する"""
-        dubline_core_style_records = xmltodict.parse(
-            self._response.text)["searchRetrieveResponse"]["records"]["record"]
-        book_info = xmltodict.parse(
-            dubline_core_style_records[0]["recordData"])["srw_dc:dc"]
-        return book_info
-
-    def to_json(self) -> dict:
-        """jsonとして吐き出す"""
-        # jsondumpsまでする？
-        return {
-            "title": self._title,
-            "author": self._author,
-            "publisher": self._publisher,
-            "descroption": self._description
-        }
+        if records["searchRetrieveResponse"]["numberOfRecords"] == 0:
+            return None
+        else:
+            dc_records = records["searchRetrieveResponse"]["records"]["record"]
+            book_info = xmltodict.parse(
+                dc_records[0]["recordData"])["srw_dc:dc"]    # 先頭のみ使う
+            return book_info
 
 
 if __name__ == "__main__":
-    test_isbn = "4774176982"
-    cliant = JpNdlSearch()
-    res = cliant.serch_by_isbn(isbn_code=test_isbn)
-
-    print(res.to_json())
+    test_isbn = "978-4839970253"
+    print(JpNdlSearchCliant().fetch(isbn=test_isbn))
+    # print(res)
