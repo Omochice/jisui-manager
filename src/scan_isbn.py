@@ -1,30 +1,25 @@
-import glob
-import os
 import re
-import sys
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import pdf2image
 import pyocr
 import PyPDF2
 
 
-def scan_isbn(input_file: str, n_use_pages: int = 7) -> Optional[str]:
-    """入力されたパスのPDFを読み取りISBN番号を返す
+def scan_isbn(input_file: Union[str, Path], n_use_pages: int = 13) -> Optional[str]:
+    """入力されたパスのPDFを読み取りISBN番号を返す 
 
-    Parameters
-    ----------
-    input_file: str
-        スキャン対象のpdfファイルへのPath
-    n_use_pages: int
-        最後から何ページをスキャン対象とするか
-    
-    Returns
-    -------
-    ISBN_code: str
-        スキャンの結果得られたISBNコード(978から始まる13桁、または旧コードの10桁)
+    Args:
+        input_file (str | Path): スキャン対象のpdfファイルへのPath
+        n_use_pages (int, optional): 最後から何ページをスキャン対象とするか
+        たまに背表紙+同版元の宣伝が3ページぐらい入っているのでカバー+背表紙+宣伝3ページぐらいを考慮し
+        デフォルト値を13としている
+
+    Returns:
+        Optional[str]: スキャンの結果得られたISBNコード(978から始まる13桁、または旧コードの10桁)
+        見つからなかったらNoneを返す（何も返さない）
     """
 
     with open(input_file, "rb") as f:
@@ -38,8 +33,8 @@ def scan_isbn(input_file: str, n_use_pages: int = 7) -> Optional[str]:
 
         isbn_code = None
 
-        for page in end_of_pages[::-1]:
-            ocr_rst = pyocr.tesseract.image_to_string(page, lang="eng")
+        for page in end_of_pages[::-1]: # 後ろのほうがコードがある確率が高いので逆順
+            ocr_rst = pyocr.tesseract.image_to_string(page, lang="eng") # 日本語と誤認識されたくない
             execlude_space = ocr_rst.replace(" ", "").replace("-", "")
             if isbn_code := re.search(r'ISBN([0-9]{13})', execlude_space):
                 return isbn_code.group(1)
@@ -48,8 +43,9 @@ def scan_isbn(input_file: str, n_use_pages: int = 7) -> Optional[str]:
 
 
 if __name__ == "__main__":
-    project_dir = Path(__file__).resolve().parents[1]
-    print(project_dir)
-    for book in glob.glob(os.path.join(project_dir, "test_books/*.pdf")):
-        print(book)
-        print(scan_isbn(book))
+    print(scan_isbn("/media/mochi/HardDiskDri/scanbook_tmporary_dir/20200610050153.pdf"))
+    # project_dir = Path(__file__).resolve().parents[1]
+    # print(project_dir)
+    # for book in glob.glob(os.path.join(project_dir, "test_books/*.pdf")):
+    #     print(book)
+    #     print(scan_isbn(book))
