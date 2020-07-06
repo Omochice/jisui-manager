@@ -1,7 +1,9 @@
 from typing import Optional
 
 import requests
+from requests.api import options
 import xmltodict
+import re
 
 
 class JpNdlSearchCliant:
@@ -47,7 +49,7 @@ class JpNdlSearchCliant:
             return None
         else:
             return {
-                "title": book_info.get("dc:title", None),
+                "title": self._format_title(book_info.get("dc:title", None)),
                 "author": book_info.get("dc:aushor", None),
                 "publisher": book_info.get("dc:publisher", None)
             }
@@ -67,6 +69,13 @@ class JpNdlSearchCliant:
             book_info = xmltodict.parse(
                 dc_records[0]["recordData"])["srw_dc:dc"]    # 先頭のみ使う
             return book_info
+
+    def _format_title(self, title: Optional[str]) -> Optional[str]:
+        """カッコなどを半角スペース一個に置き換える"""
+        if title is None:
+            return None
+        half_width = re.sub('[（）　]', ' ', title).rstrip()
+        return re.sub(' +', ' ', half_width)
 
 
 if __name__ == "__main__":
