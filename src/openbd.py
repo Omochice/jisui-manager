@@ -1,26 +1,60 @@
-import requests
 import json
 import re
+from typing import Optional, Iterator, Union
+
+import requests
 
 
-class OpenDbSearchCliant:
-    def fetch(self, isbn_code: str) -> dict:
-        d = self._fetch(isbn_code)
-        for serialized in self._serialize(d):
-            yield serialized
+class OpenBDSearchCliant:
+    """OpenBDのAPIを叩くクラス
+    """
+    def __init__(self):
+        self.user_agent = {
+            "user-agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.98 Safari/537.36"
+        }
+        self.response = None
 
-    def _fetch(self, isbn_code: str) -> dict:
+    def fetch(self,
+              isbn_code: str,
+              use_first: bool = True) -> Optional[Union[dict, list]]:
+        """OpenBDのAPIを叩いて書籍情報をdictで取得する
+
+        Args:
+            isbn_code (str): ISBNコード
+            use_first (bool, optional): 複数結果のうち最初の1件のみを返すかどうか. Defaults to True.
+
+        Returns:
+            Optional[Union[dict, list]]: 書籍情報のdict(use_firstがTrueならlist[dict])
+        """
         URL = "https://api.openbd.jp/v1/get"
         params = {"isbn": isbn_code}
-        r = json.loads(requests.get(URL, params=params).text)
-        return r
+        self.response = requests.get(URL, params=params, headers=self.user_agent)
+        r = json.loads(self.response.text)
 
-    def _serialize(self, response: dict) -> dict:
-        """レスポンスから必要な部分を抜き出す"""
+        if not r:
+            return None
+
+        serialized = list(self._serialize(r))
+        if use_first:
+            # 特に指定がなければレコードの先頭を返す
+            return serialized[0]
+        else:
+            return serialized
+
+    def _serialize(self, response: dict) -> Iterator[dict]:
+        """レスポンスから必要な部分を抜き出す
+
+        Args:
+            response (dict): jsonレスポンスをdictにしたもの
+
+        Yields:
+            Iterator[dict]: 必要な部分を抜き出したdictを返すイテレータ
+        """
         for r in response:
             summary = r["summary"]
             serialized = {
-                "title": (title:=self._format_title(summary["tilte"])),
+                "title": (self._format_title(summary["title"])),
                 "identifier": {
                     "isbn": summary["isbn"]
                 },
@@ -42,11 +76,13 @@ class OpenDbSearchCliant:
         return list(map(lambda x: re.sub(r"／.+", "", x), authors.split(" ")))
 
 
-
-
 if __name__ == "__main__":
 
-    isbn = "9784339029079"
-    
-    for r in OpenDbSearchCliant().fetch(isbn):
-        print(r)
+    # isbn = "9784339029079"
+    isbn = "9784780802047"
+    # isbn = "9784040800202"
+    print(isbn)
+
+    print(OpenBDSearchCliant().fetch(isbn))
+    # for r in OpenDbSearchCliant().fetch(isbn):
+    # print(r)
