@@ -65,7 +65,7 @@ class OpenBDSearchCliant:
 
     def _format_title(self, title: str) -> str:
         """カッコなどを半角スペース一個に置き換える"""
-        half_width = re.sub('[（）　]', ' ', title).rstrip()
+        half_width = re.sub('[（）　:]', ' ', title).rstrip()
         return re.sub(' +', ' ', half_width)
 
     def _fotmat_authors(self, authors: str) -> list:

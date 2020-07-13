@@ -74,7 +74,7 @@ class JpNdlSearchCliant:
         """カッコなどを半角スペース一個に置き換える"""
         if title is None:
             return None
-        half_width = re.sub('[（）　]', ' ', title).rstrip()
+        half_width = re.sub('[（）　:]', ' ', title).rstrip()
         return re.sub(' +', ' ', half_width)
 
 
