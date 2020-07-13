@@ -1,15 +1,14 @@
 import os
 import shutil
-import sqlite3
 from pathlib import Path
 
 import yaml
 
+from databese import DatabaseCliant
 from honto import HontoSearchCliant
 from JpNdl import JpNdlSearchCliant
 from mylogger import MyLogger
 from openbd import OpenBDSearchCliant
-from pyexpat import features
 from scan_isbn import scan_isbn
 
 
@@ -64,10 +63,10 @@ def main():
         config = yaml.safe_load(f)
 
     os.makedirs(config["output_dir"], exist_ok=True)
+    db_cliant = DatabaseCliant(config["database_path"])
 
     # input_dir内のPDFに対して処理をする
     for pdf_file in Path(config["input_dir"]).glob("**/*.pdf"):
-        print(pdf_file)
         # isbnの取得
         isbn_code = scan_isbn(pdf_file)
 
@@ -94,7 +93,18 @@ def main():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(pdf_file, dst)
         logger.write("SUCCESS", dst)
+
         # データベースに情報を追加
+        fetch_result = {
+            "title": book_info["title"],
+            "isbn": isbn_code,
+            "authors": "\t".join(book_info["authors"]),
+            "publishers": book_info["publisher"],
+            "categories": categories["category"],
+            "destination": str(dst)
+        }
+
+        db_cliant.store(fetch_result)
 
 
 if __name__ == "__main__":
