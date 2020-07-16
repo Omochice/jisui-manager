@@ -4,13 +4,17 @@ import requests
 import urllib3
 from bs4 import BeautifulSoup
 from urllib3.exceptions import InsecureRequestWarning
+import re
+import json
 
+from bookinfo_util import format_title
 urllib3.disable_warnings(InsecureRequestWarning)
 
 
 class HontoSearchCliant:
-    def __init__(self):
-        self.url = "https://honto.jp/netstore/search.html"    # 紙+電子書籍の検索
+    def __init__(self) -> None:
+        self.extended_url = "https://honto.jp/netstore/search.html"    # 紙+電子書籍の検索
+        self.url = "https://honto.jp/netstore/search_022.html"    # 電子書籍のみ
         self.user_agent = {
             "user-agent":
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.98 Safari/537.36"
@@ -47,8 +51,16 @@ class HontoSearchCliant:
         # 検索結果から個別ページへいく
         soup = BeautifulSoup(self._fetch_html(self.url, params=params),
                              features="html.parser")
-        individual_page_url = soup.find("a", class_="dyTitle").get(
-            "href")    # 複数hitは戦闘のものを抽出
+        dytitle = soup.find("a", class_="dyTitle")
+
+        if dytitle is None:
+            dytitle = BeautifulSoup(self._fetch_html(self.extended_url, params=params),
+                                    features="html.parser").find("a", class_="dyTitle")
+            # 電子書籍のみでヒットしなければ紙も検索に含める
+        if dytitle is None:    #それでもヒットしなければ
+            raise ValueError(f"Honto not have the book data. {isbn=}")
+
+        individual_page_url = dytitle.get("href")    # 複数hitは先頭のものを抽出
 
         soup = BeautifulSoup(self._fetch_html(individual_page_url),
                              features="html.parser")
@@ -75,7 +87,10 @@ class HontoSearchCliant:
         その他 -> サブ分類
         """
         if category in {"文庫", "小説・文学"}:
-            author = [t.text for t in soup.select("p#stAuthor > span > a")][0]
+            author = ([
+                t.text.split(":")[-1]
+                for t in soup.find("p", class_="stAuthor").find_all("a")
+            ] or [""])[0]
             sub_category = author.split(":")[-1]    # 著:などの除去
         elif category in {"漫画・コミック", "ライトノベル"}:
             media = soup.select("p.stFormat")[0].contents[0]
@@ -90,12 +105,42 @@ class HontoSearchCliant:
         return sub_category
 
     def fetch_category_info(self, isbn: str) -> dict:
-        soup = self.fetch_individual_page(isbn)
+        try:
+            soup = self.fetch_individual_page(isbn)
+        except ValueError as e:
+            raise ValueError(e)
         category = self._get_category(soup)
         sub_category = self._get_sub_category(soup, category)
         return {"category": category, "sub_category": sub_category}
 
+    def fetch_book_info(self, isbn: str) -> dict:
+        try:
+            soup = self.fetch_individual_page(isbn)
+        except ValueError as e:
+            raise ValueError(e)
+        d = json.loads(
+            soup.find_all("script", attrs={"type": "application/ld+json"})[1].string)
+
+        book_title = re.search(r"(【.+】)?(.+)", format_title(d["name"])).group(2)
+        authors = [
+            re.split(r"[:：]", t.text)[-1]
+            for t in soup.find("p", class_="stAuthor").find_all("a")
+        ] or [""]
+        authors = [re.sub(" ", "", re.sub(r"\(.+\)", "", a)) for a in authors]
+        publisher = d["brand"]["name"]
+        category = self._get_category(soup)
+        sub_category = self._get_sub_category(soup, category)
+
+        info = {
+            "title": book_title,
+            "authors": authors,
+            "publisher": publisher,
+            "category": category,
+            "sub_category": sub_category
+        }
+        return info
+
 
 if __name__ == "__main__":
     cliant = HontoSearchCliant()
-    print(cliant.fetch_category_info(isbn="4088725158"))
+    print(cliant.fetch_book_info(isbn="9784088727585"))
