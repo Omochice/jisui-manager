@@ -141,8 +141,11 @@ class HontoSearchCliant:
             soup = self.fetch_individual_page(isbn)
         except HontoDoesNotHaveDataError as e:
             raise HontoDoesNotHaveDataError(e)
-        d = json.loads(
-            soup.find_all("script", attrs={"type": "application/ld+json"})[1].string)
+
+        script = soup.find_all("script", attrs={"type":
+                                                "application/ld+json"})[1].string
+        formatted = re.sub("　", " ", re.sub("[\n\r]", "", script))
+        d = json.loads(formatted)
 
         #【.+】の削除
         book_title = re.search(r"(【.+】)?(.+)?(【.+】)?",
@@ -152,7 +155,7 @@ class HontoSearchCliant:
             for t in soup.find("p", class_="stAuthor").find_all("a")
         ] or [""]
         authors = [re.sub(" ", "", re.sub(r"\(.+\)", "", a)) for a in authors]
-        publisher = d["brand"]["name"]
+        publisher = d.get("brand", {}).get("name", "")
         category = self._get_category(soup)
         sub_category = self._get_sub_category(soup, category)
 
@@ -172,4 +175,4 @@ class HontoDoesNotHaveDataError(Exception):
 
 if __name__ == "__main__":
     cliant = HontoSearchCliant()
-    print(cliant.fetch_book_info(isbn="9784088727585"))
+    print(cliant.fetch_book_info(isbn="9784047261273"))
