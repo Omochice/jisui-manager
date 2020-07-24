@@ -1,13 +1,14 @@
+import json
+import re
 from typing import Optional
 
 import requests
 import urllib3
 from bs4 import BeautifulSoup
 from urllib3.exceptions import InsecureRequestWarning
-import re
-import json
 
-from bookinfo_util import format_title
+import bookinfo_util
+
 urllib3.disable_warnings(InsecureRequestWarning)
 
 
@@ -58,7 +59,7 @@ class HontoSearchCliant:
                                     features="html.parser").find("a", class_="dyTitle")
             # 電子書籍のみでヒットしなければ紙も検索に含める
         if dytitle is None:    #それでもヒットしなければ
-            raise ValueError(f"Honto not have the book data. {isbn=}")
+            raise HontoDoesNotHaveDataError(f"Honto not have the book data. {isbn=}")
 
         individual_page_url = dytitle.get("href")    # 複数hitは先頭のものを抽出
 
@@ -105,23 +106,47 @@ class HontoSearchCliant:
         return sub_category
 
     def fetch_category_info(self, isbn: str) -> dict:
+        """isbnを受け取りその本のカテゴリを返す
+
+        Args:
+            isbn (str): isbn番号
+
+        Raises:
+            HontoDoesNotHaveDataError: honto.jpにその本のページがないときのエラー
+
+        Returns:
+            dict: 大カテゴリ(漫画、新書など)と小カテゴリ(出版社など)のdict
+        """
         try:
             soup = self.fetch_individual_page(isbn)
-        except ValueError as e:
-            raise ValueError(e)
+        except HontoDoesNotHaveDataError as e:
+            raise HontoDoesNotHaveDataError(e)
         category = self._get_category(soup)
         sub_category = self._get_sub_category(soup, category)
         return {"category": category, "sub_category": sub_category}
 
     def fetch_book_info(self, isbn: str) -> dict:
+        """書籍情報を返す
+
+        Args:
+            isbn (str): isbn
+
+        Raises:
+            HontoDoesNotHaveDataError: honto.jpにその本のページがないときのエラー
+
+        Returns:
+            dict: 書籍情報のdict
+        """
         try:
             soup = self.fetch_individual_page(isbn)
-        except ValueError as e:
-            raise ValueError(e)
+        except HontoDoesNotHaveDataError as e:
+            raise HontoDoesNotHaveDataError(e)
         d = json.loads(
             soup.find_all("script", attrs={"type": "application/ld+json"})[1].string)
 
-        book_title = re.search(r"(【.+】)?(.+)", format_title(d["name"])).group(2)
+        #【.+】の削除
+        book_title = re.search(r"(【.+】)?(.+)?(【.+】)?",
+                               bookinfo_util.format_title(d["name"])).group(2)
         authors = [
             re.split(r"[:：]", t.text)[-1]
             for t in soup.find("p", class_="stAuthor").find_all("a")
@@ -133,12 +158,16 @@ class HontoSearchCliant:
 
         info = {
             "title": book_title,
-            "authors": authors,
+            "authors": bookinfo_util.format_authors(authors),
             "publisher": publisher,
             "category": category,
             "sub_category": sub_category
         }
         return info
+
+
+class HontoDoesNotHaveDataError(Exception):
+    pass
 
 
 if __name__ == "__main__":

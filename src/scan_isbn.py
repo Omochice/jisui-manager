@@ -33,17 +33,41 @@ def scan_isbn(input_file: Union[str, Path], n_use_pages: int = 13) -> Optional[s
 
         isbn_code = None
 
-        for page in end_of_pages[::-1]: # 後ろのほうがコードがある確率が高いので逆順
-            ocr_rst = pyocr.tesseract.image_to_string(page, lang="eng") # 日本語と誤認識されたくない
+        for page in end_of_pages[::-1]:    # 後ろのほうがコードがある確率が高いので逆順
+            ocr_rst = pyocr.tesseract.image_to_string(page,
+                                                      lang="eng")    # 日本語と誤認識されたくない
             execlude_space = ocr_rst.replace(" ", "").replace("-", "")
-            if isbn_code := re.search(r'ISBN([0-9]{13})', execlude_space):
-                return isbn_code.group(1)
-            elif isbn_code := re.search(r'ISBN([0-9]{10})', execlude_space):
-                return isbn_code.group(1)
+
+            # print(execlude_space)
+
+            isbn_code = (re.search(r'[Ii][Ss][Bb][Nn]([0-9]{12,13})', execlude_space)
+                         or re.search(r'[Ii][Ss][Bb][Nn]([0-9X]{9,10})', execlude_space)
+                         or re.search(r"(978[0-9]{9,10})", execlude_space))
+            if isbn_code:
+                return modify_missing(isbn_code.group(1))
+
+
+def modify_missing(isbn: str):
+    n_code = len(isbn)
+    total = 0
+    if n_code == 12:    # isbn13の末尾欠損
+        for i, number in zip(range(n_code), map(int, isbn)):
+            total += number * (1 + 2 * (i % 2))
+        c = (10 - (total % 10)) % 10
+        isbn += str(c)
+    elif n_code == 9:    # isbn10の末尾欠損
+        for i, number in zip(range(n_code), map(int, isbn)):
+            total += (10 - i) * number
+        c = (11 - total % 11) % 11
+        if c == 10:
+            c = "X"
+        isbn += str(c)
+    return isbn
 
 
 if __name__ == "__main__":
-    print(scan_isbn("/media/mochi/HardDiskDri/scanbook_tmporary_dir/20200610050153.pdf"))
+    print(scan_isbn("/media/mochi/HardDiskDri/books/tmp/06_涼宮ハルヒの動揺.pdf"))
+    # print(modify_missing("409126168"))
     # project_dir = Path(__file__).resolve().parents[1]
     # print(project_dir)
     # for book in glob.glob(os.path.join(project_dir, "test_books/*.pdf")):

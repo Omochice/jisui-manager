@@ -1,5 +1,6 @@
 import sqlite3
 from pathlib import Path
+import os
 
 
 class DatabaseCliant:
@@ -10,16 +11,21 @@ class DatabaseCliant:
             database_path (Path): データベースのpath
         """
         self.dst = database_path
-        self.connection = sqlite3.connect(self.dst)
+        if not self.dst.exists():
+            self.dst.touch()
+            self.connection = sqlite3.connect(self.dst)
+            self.run_by_file(self.dst.parent / "schema.sql")
+        else:
+            self.connection = sqlite3.connect(self.dst)
         self.connection.row_factory = sqlite3.Row
 
-    def __del__(self) -> None:
+    def close(self) -> None:
         """connectionを切断する
         """
         self.connection.close()
 
     def run_by_file(self, path: Path) -> None:
-        """SQLファイルを読み込み実行する
+        """SQLファイルを読み込み実行する(初期化)
 
         Args:
             path (Path): sql文が書いてあるファイルのpath
@@ -51,8 +57,8 @@ class DatabaseCliant:
             tuple: connection.cursor.executeに適用するtuple
         """
         outer_key = {"publishers": None, "authors": None, "categories": None}
-        for tmp in outer_key.keys():
-            outer_key[tmp] = self.select_individual_id(tmp, data[tmp])
+        for key in outer_key.keys():
+            outer_key[key] = self.select_individual_id(key, data[key])
 
         return (data["title"], data["isbn"], outer_key["publishers"],
                 outer_key["authors"], outer_key["categories"], data["destination"])
