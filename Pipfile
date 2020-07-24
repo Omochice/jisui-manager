@@ -10,12 +10,16 @@ ipython = "*"
 pyocr = "*"
 pypdf2 = "*"
 pdf2image = "*"
-jpndlpy = "*"
 requests = "*"
-xmltodict = "*"
+selenium = "*"
+pyyaml = "*"
+beautifulsoup4 = "*"
 
 [requires]
 python_version = "3.8"
 
 [pipenv]
 allow_prereleases = true
+
+[scripts]
+start = "python3 src/run.py"
