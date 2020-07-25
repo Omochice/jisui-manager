@@ -82,6 +82,19 @@ class DatabaseCliant:
             columns_id = c.execute(base_query, (column, )).fetchone()
         return columns_id["id"]
 
+    def update_dst(self, target: Path, dst: Path) -> None:
+        """isbnや書籍情報が無いものを手作業でアップデートする 
+
+        Args:
+            target (Path): 対象の本のpath
+            dst (Path): 指定したpath
+        """
+        c = self.connection.cursor()
+        stem = target.stem
+        query = "INSERT INTO books (title, destination) VALUES(?, ?) WHERE NOT EXISTS (SELECT * FROM books WHERE title = ?)"
+        c.execute(query, (stem, str(dst / target.name), stem))
+        self.connection.commit()
+
 
 if __name__ == "__main__":
     project_dir = Path(__file__).resolve().parents[1]
