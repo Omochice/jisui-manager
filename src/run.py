@@ -1,5 +1,3 @@
-import csv
-import os
 import shutil
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
@@ -33,6 +31,7 @@ def send_err_dir(target: Path, dst: Path) -> None:
         target (Path): 対象のpdf
         dst (Path): 行き先
     """
+    dst = dst / "tmp"
     dst.mkdir(parents=True, exist_ok=True)
     shutil.move(str(target), dst)
 
@@ -144,49 +143,6 @@ def construct_dst(parent_path: Path, book_info: dict) -> Path:
     return dst
 
 
-def completion_no_isbn(source_csv_path: str) -> None:
-    logger = MyLogger()
-    honto = HontoSearchCliant()
-    ehon = EhonSearchCliant()
-
-    with open(Path(__file__).resolve().parents[1] / "config.yml") as f:
-        config = yaml.safe_load(f)
-        os.makedirs(config["output_dir"], exist_ok=True)
-
-    db_cliant = DatabaseCliant(Path(config["database_path"]))
-
-    csv_path = Path(source_csv_path).resolve()
-    with open(csv_path) as f:
-        reader = csv.reader(f)
-    for row in reader:
-        book_path = Path(row[0]).resolve()
-        isbn = str(row[1])
-        try:
-            info = fetch_book_info_from_isbn(isbn, honto, ehon)
-        except HontoDoesNotHaveDataError as e:
-            send_err_dir(book_path, config["output_dir"])
-            logger.write("ERROR", str(e))
-            continue
-        else:
-            dst = construct_dst(config["output_dir"], info)
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(book_path), dst)
-            logger.write("SUCCESS", dst)
-
-            # データベースに情報を追加
-            fetch_result = {
-                "title": info["title"],
-                "isbn": info["isbn"],
-                "authors": "\t".join(info["authors"] or [""]),
-                "publishers": info["publisher"],
-                "categories": info["category"],
-                "destination": str(dst)
-            }
-
-            db_cliant.store(fetch_result)
-    db_cliant.close()
-
-
 class NotFoundIsbnError(Exception):
     pass
 
@@ -202,7 +158,7 @@ def main():
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
-    os.makedirs(config["output_dir"], exist_ok=True)
+    Path(config["output_dir"]).mkdir(exist_ok=True, parents=True)
     db_cliant = DatabaseCliant(Path(config["database_path"]))
     honto_cliant = HontoSearchCliant()
     ehon_cliant = EhonSearchCliant()
@@ -212,11 +168,11 @@ def main():
         try:
             book_info = fetch_book_info_from_pdf(pdf_file, honto_cliant, ehon_cliant)
         except NotFoundIsbnError as e:
-            send_err_dir(pdf_file, config["output_dir"])
+            send_err_dir(pdf_file, Path(config["output_dir"]))
             logger.write("ERROR", str(e))
             continue
         except HontoDoesNotHaveDataError as e:
-            send_err_dir(pdf_file, config["output_dir"])
+            send_err_dir(pdf_file, Path(config["output_dir"]))
             logger.write("ERROR", str(e))
             continue
 
@@ -245,15 +201,8 @@ def parser() -> Namespace:
     Returns:
         Namespace: args namespace.
     """
-    usage = f"Usage: python {__file__} [-i input_csv]"
+    usage = f"Usage: python {__file__}"
     argparser = ArgumentParser(usage=usage)
-    argparser.add_argument(
-        "-i",
-        "--input_csv",
-        help=
-        "If you want to manage no isbn having book too, specify csv path. like 'book_pash', 'isbn'"
-    )
-
     args = argparser.parse_args()
     return args
 
@@ -261,7 +210,4 @@ def parser() -> Namespace:
 if __name__ == "__main__":
     show_title()
     args = parser()
-    if args.input_csv is None:
-        main()
-    else:
-        completion_no_isbn(args.input_csv)
+    main()
