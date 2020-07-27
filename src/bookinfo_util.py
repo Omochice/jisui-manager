@@ -28,16 +28,17 @@ def format_title(title: str) -> str:
 
 
 def format_authors(authors: list) -> list:
-    formatted = [re.split("[:：]", author) for author in authors]
     formatted = [re.sub(r"[\(（].+?[\)）]", "", author) for author in authors]
+    formatted = [re.sub(r"\s", "", author) for author in formatted]
     return [f.translate(z2h) for f in formatted]
 
 
 def format_publisher(publisher: str) -> str:
-    formatted = "goo"
+    formatted = re.sub("・", "", publisher)
+    formatted = formatted.translate(z2h)
     return formatted
 
 
 if __name__ == "__main__":
     print(corpus)
-    print(format_authors(["西尾章治郎(監修)", "原隆浩（著）", "水田智史（著）", "大川剛直（著）"]))
+    print(format_authors(["西尾 章　治郎(監修)", "原隆浩（著）", "水田智史（著）", "大川剛直（著）"]))
