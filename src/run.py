@@ -42,26 +42,40 @@ def generate_config_file(config_path: Path) -> None:
     Args:
         config_path (Path): configファイルの置き場所
     """
-    input_dir = Path("not exists path")    # dummy path
 
-    item = ("input_dir", "output_dir", "database_path")
-    config = {}
+    config = {
+        "input_dir": "",
+        "output_dir": "",
+        "database_path": str(Path(__file__).resolve().parents[1] / "books.sqlite3")
+    }
 
     print("Cannot find config file.")
     print("\tGenerating config file...")
 
-    for i in item:
-        directory = Path("not exist path")
-
-        while True:
-            print(f"\tInput {i}: ", end="")
-            directory = Path(input()).resolve()
-            if i == "input_dir" and not directory.exists():
-                print("\tThe path is not exists...")
-            else:
-                print()
-                break
-        config[i] = str(directory)
+    for key, value in config:
+        if key == "input_dir":
+            while True:
+                path = Path(input(f"\tType {key} path: ")).resolve()
+                if path.exists():
+                    break
+                else:
+                    print("\tThe path is not exists...")
+        elif key == "output_dir":
+            path = Path(input(f"\tType {key} path: ")).resolve()
+        elif key == "database_path":
+            path = value
+            print(f"\tChange database path (default {value}) ? [y/n]: ")
+            while True:
+                input_line = input()
+                if input_line in {"y", "Y", "yes"}:
+                    path = Path(input(f"\tType {key}: ")).resolve()
+                elif input_line in {"n", "N", "no"}:
+                    break
+                else:
+                    print("Type [y/n]: ")
+        else:
+            path = ""
+        config[key] = str(path)
 
     with open(config_path, "w") as f:
         yaml.safe_dump(config, f, allow_unicode=True)
