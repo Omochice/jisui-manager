@@ -148,23 +148,21 @@ class HontoSearchCliant:
         d = json.loads(formatted)
 
         #【.+】の削除
-        book_title = re.search(r"(【.+】)?(.+)?(【.+】)?",
-                               bookinfo_util.format_title(d["name"])).group(2)
+        book_title = bookinfo_util.format_title(d["name"])
         authors = [
             re.split(r"[:：]", t.text)[-1]
             for t in soup.find("p", class_="stAuthor").find_all("a")
         ] or [""]
-        authors = [re.sub(" ", "", re.sub(r"\(.+\)", "", a)) for a in authors]
         publisher = d.get("brand", {}).get("name", "")
         category = self._get_category(soup)
-        sub_category = self._get_sub_category(soup, category)
+        sub_category = self._get_sub_category(soup, category) or ""
 
         info = {
-            "title": book_title,
+            "title": bookinfo_util.format_title(book_title),
             "authors": bookinfo_util.format_authors(authors),
-            "publisher": publisher,
+            "publisher": bookinfo_util.format_publisher(publisher),
             "category": category,
-            "sub_category": sub_category
+            "sub_category": bookinfo_util.format_title(sub_category)
         }
         return info
 
