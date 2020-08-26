@@ -66,7 +66,7 @@ def modify_missing(isbn: str):
 
 
 if __name__ == "__main__":
-    print(scan_isbn("/media/mochi/HardDiskDri/books/tmp/06_涼宮ハルヒの動揺.pdf"))
+    pass
     # print(modify_missing("409126168"))
     # project_dir = Path(__file__).resolve().parents[1]
     # print(project_dir)

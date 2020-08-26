@@ -22,10 +22,10 @@ def format_title(title: str) -> str:
     Returns:
         str: 整形した文字列
     """
-    half_width = re.sub('[（）　:<>/="]', ' ', title).rstrip()
+    half_width = re.sub('[（）　:<>/="]', ' ', title)
     deleted_option = re.sub(r"【.+】", "", half_width)
     deleted_option.translate(safe_operator)
-    return re.sub(' +', '_', deleted_option.translate(z2h))
+    return re.sub(' +', '_', deleted_option.translate(z2h).strip())
 
 
 def format_authors(authors: list) -> list:
@@ -38,9 +38,3 @@ def format_publisher(publisher: str) -> str:
     formatted = re.sub("・", "", publisher)
     formatted = formatted.translate(z2h)
     return formatted
-
-
-if __name__ == "__main__":
-    print(corpus)
-    print(format_title("変女～変な女子高生_甘栗千子～【電子版限定「千子が脱いだ！」解禁フルカラーおまけ付き】"))
-    print(format_authors(["西尾 章　治郎(監修)", "原隆浩（著）", "水田智史（著）", "大川剛直（著）"]))
