@@ -10,10 +10,18 @@ import bookinfo_util
 class EhonSearchCliant:
     def __init__(self) -> None:
         self.url = "https://www.e-hon.ne.jp/bec/SA/Search"
-        self._driver_path = subprocess.run(["which", "chromium.chromedriver"],
-                                           encoding="UTF-8",
-                                           stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE).stdout.rstrip()
+        self._driver_path = (subprocess.run(["which", "chromium.chromedriver"],
+                                            encoding="UTF-8",
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE).stdout.rstrip()
+                             or subprocess.run(["which", "chromedriver"],
+                                               encoding="UTF-8",
+                                               stdout=subprocess.PIPE,
+                                               stderr=subprocess.PIPE).stdout.rstrip())
+        if not self._driver_path:
+            raise NotFoundChromeDriverError(
+                "cannot found chromedriver. please install chromedriver")
+
         self._options = webdriver.ChromeOptions()
         self._options.add_argument(
             "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36"
@@ -96,6 +104,10 @@ class EhonSearchCliant:
 
 
 class EhonDoesNotHaveDataError(Exception):
+    pass
+
+
+class NotFoundChromeDriverError(Exception):
     pass
 
 

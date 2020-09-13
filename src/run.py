@@ -52,7 +52,7 @@ def generate_config_file(config_path: Path) -> None:
     print("Cannot find config file.")
     print("\tGenerating config file...")
 
-    for key, value in config:
+    for key, value in config.items():
         if key == "input_dir":
             while True:
                 path = Path(input(f"\tType {key} path: ")).resolve()
@@ -64,7 +64,7 @@ def generate_config_file(config_path: Path) -> None:
             path = Path(input(f"\tType {key} path: ")).resolve()
         elif key == "database_path":
             path = value
-            print(f"\tChange database path (default {value}) ? [y/n]: ")
+            print(f"\tChange database path (default {value}) ? [y/n]: ", end="")
             while True:
                 input_line = input()
                 if input_line in {"y", "Y", "yes"}:
