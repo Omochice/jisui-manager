@@ -7,25 +7,36 @@
 ## 使い方
 
 1. Tesseractを使うのでaptとかで入れてください。
-    ```sh
-    $ sudo apt install tesseract-ocr
-    $ sudo apt install libtesseract-dev
-    ```
-1. このツールをまるっとgitでcloneする
+    * Ubuntu(Debian)
+        ```sh
+        $ sudo apt install tesseract-ocr libtesseract-dev
+        ```
+    * Manjaro(Arch)
+        ```sh
+        $ sudo pacman -S tesseract tessetact-data-eng
+        ```
+2. このツールをまるっとgitでcloneする
     ```sh 
-    $ git clone https://github.com/Omochice/book_manager.git
+    $ git clone https://github.com/Omochice/jisui-manager.git
     ```
-1. 初回起動時(プロジェクト直下にconfigファイルがないとき)にpdfの入っているディレクトリと出力先のディレクトリを尋ねるので答える。
+3. 環境再現をする
     ```sh
-    $ cd book_manager
-    $ python3 src/run.py
+    $ pip install pipenv
+    $ cd jisui-manager
+    $ pipenv install
+    ```
+4. 初回起動時(プロジェクト直下にconfigファイルがないとき)にpdfの入っているディレクトリと出力先のディレクトリを尋ねるので答える。
+    ```sh
+    $ cd  jisui-manager
+    $ pipenv run start
     [入力先と出力先を入力]
     ```
-1. エラー終了しなければ指定した出力先にリネームしたpdfファイルがあるはずです。
+5. エラー終了しなければ指定した出力先にリネームしたpdfファイルがあるはずです。
    * ISBNが読み取れない、タイトルが取得できないなどの場合は`[出力先]/tmp`内に移動します
 
 ## 動作確認環境
 
 Ubuntu 20.04 LTS
+Manjaro Linux
 
 
